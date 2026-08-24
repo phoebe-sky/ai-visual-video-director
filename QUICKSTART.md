@@ -1,63 +1,48 @@
 # Quick Start
 
-## 1. Prepare source material
+## 1. Install the Skill
 
-Minimum:
-- one talking-head or narration video
+Repository:
 
-Optional:
-- script or transcript
-- screen recording
-- product images
-- screenshots
-- logos
-- B-roll
-- brand guide
+`https://github.com/phoebe-sky/ai-visual-video-director`
 
-## 2. Set your Creator Profile
+Install the `ai-visual-video-director` Skill through Codex.
 
-Edit `config/creator-profile.yaml` once.
+## 2. Upload a source video
 
-This controls:
-- visual density
-- preferred visual language
-- pacing
-- subtitle behavior
-- camera treatment
-- styles to avoid
-
-## 3. Give the Skill a simple request
-
-Example:
+Then say:
 
 ```
 Use $ai-visual-video-director to edit this video.
-Keep the speaker natural.
-Analyze the content first, then create appropriate graphics, diagrams, icons,
-number treatments and visual metaphors only where they improve comprehension.
-Use medium visual density.
+Please analyze the content, restructure it when useful, add semantic visuals,
+subtitles, motion graphics and PIP/B-roll where appropriate, and export the final MP4.
 ```
 
-## 4. Expected planning output
+## 3. First-run dependencies
 
-Before rendering, the Skill should produce:
-- content profile
-- narrative beat map
-- timed Visual Cue Sheet
-- Edit Plan
-- asset list
+The Skill checks its local runtime.
 
-## 5. Review only what matters
+When Codex asks for one-time confirmation to download local dependencies and the Whisper model, approve it.
 
-The creator should not need to manually design every visual.
+## 4. What should happen automatically
 
-Review:
-- whether the visual concept matches the spoken idea,
-- whether the density feels right,
-- whether any facts or numbers need correction,
-- whether a brand asset should replace a generic visual.
+1. ffprobe inspection
+2. local transcription
+3. semantic / narrative analysis
+4. source cuts and story order
+5. executable edit plan
+6. generated graphics + supplied media overlays
+7. subtitles
+8. FFmpeg render
+9. QA decode
+10. final MP4
 
-## 6. Render
+You should not need to manually create a Visual Cue Sheet unless you want to override the AI director.
 
-Use the available video rendering stack in the execution environment.
-The Skill itself defines the directing logic; rendering implementation may vary.
+## 5. Planning-only mode
+
+Only use this when you intentionally do not want a render:
+
+```
+Use $ai-visual-video-director to create the edit plan only. Do not render yet.
+```
