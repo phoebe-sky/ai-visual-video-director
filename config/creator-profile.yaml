@@ -1,0 +1,32 @@
+version: 1
+creator:
+  name: ""
+  language: "zh-TW"
+
+editing:
+  pace: "fast"
+  visual_density: "medium"
+  presenter_priority: "high"
+  allow_fullscreen_graphics: true
+  preferred_visuals:
+    - kinetic_typography
+    - diagram
+    - icon
+    - ui_card
+    - comparison
+  avoid_visuals:
+    - excessive_ai_generated_images
+    - childish_stickers
+    - random_b_roll
+    - effects_without_semantic_purpose
+
+subtitles:
+  enabled: true
+  style: "bold_clean"
+  highlight_keywords: true
+  max_lines: 2
+
+camera:
+  allow_subtle_push_in: true
+  allow_reframe: true
+  avoid_aggressive_shake: true
