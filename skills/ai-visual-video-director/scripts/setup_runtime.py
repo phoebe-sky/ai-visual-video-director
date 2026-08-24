@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect or install an isolated FFmpeg + faster-whisper runtime."""
+"""Inspect or install the isolated AI Visual Video Director runtime."""
 
 import argparse
 import json
@@ -79,7 +79,7 @@ def install(model):
     if not runtime_python().is_file():
         venv.EnvBuilder(with_pip=True, clear=False).create(runtime_dir())
     python = runtime_python()
-    packages = [f"faster-whisper=={FASTER_WHISPER_VERSION}"]
+    packages = [f"faster-whisper=={FASTER_WHISPER_VERSION}", "Pillow>=10,<12", "matplotlib>=3.8,<4"]
     if not (shutil.which("ffmpeg") and shutil.which("ffprobe")):
         packages.append(f"static-ffmpeg=={STATIC_FFMPEG_VERSION}")
     run_checked([str(python), "-m", "pip", "install", "--disable-pip-version-check", *packages])
@@ -136,7 +136,7 @@ def main():
     if args.dry_run:
         print(json.dumps({
             "will_create": str(runtime_dir()),
-            "will_install": [f"faster-whisper=={FASTER_WHISPER_VERSION}", f"static-ffmpeg=={STATIC_FFMPEG_VERSION} when system FFmpeg is unavailable"],
+            "will_install": [f"faster-whisper=={FASTER_WHISPER_VERSION}", "Pillow>=10,<12", "matplotlib>=3.8,<4", f"static-ffmpeg=={STATIC_FFMPEG_VERSION} when system FFmpeg is unavailable"],
             "will_download_model": args.model,
             "preserved_on_skill_update": str(data_home()),
         }, ensure_ascii=False, indent=2))
