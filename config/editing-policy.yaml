@@ -1,0 +1,28 @@
+version: 1
+editing_policy:
+  factual_integrity:
+    invent_data: false
+    invent_quotes: false
+    infer_missing_metrics: false
+
+  visual_logic:
+    require_semantic_reason: true
+    avoid_effect_for_every_sentence: true
+    simplify_when_uncertain: true
+
+  presenter:
+    protect_face_region: true
+    protect_gesture_region_when_relevant: true
+
+  platform:
+    default_aspect_ratio: "9:16"
+    preserve_subtitle_safe_zone: true
+
+  fallback_order:
+    - presenter_only
+    - kinetic_typography
+    - icon
+    - diagram
+    - screenshot
+    - b_roll
+    - generated_visual
