@@ -40,7 +40,7 @@ def main():
             {"start":4.0,"end":6.0,"text":"先理解內容再決定畫面"}
           ],
           "words":[]
-        ],ensure_ascii=False),encoding="utf-8")
+        },ensure_ascii=False),encoding="utf-8")
 
         plan.write_text(json.dumps({
           "source_cuts":[
