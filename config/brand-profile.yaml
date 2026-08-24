@@ -1,0 +1,21 @@
+version: 1
+brand:
+  name: ""
+  primary_color: ""
+  secondary_color: ""
+  background_color: ""
+  text_color: ""
+  accent_color: ""
+  logo_path: ""
+
+typography:
+  primary_font: ""
+  secondary_font: ""
+  number_style: "bold"
+
+layout:
+  safe_zone:
+    top_percent: 8
+    bottom_percent: 18
+    left_percent: 6
+    right_percent: 6
