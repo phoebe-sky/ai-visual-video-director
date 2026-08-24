@@ -46,6 +46,8 @@ def inspect(model="small"):
     ffmpeg = system_ffmpeg or (recorded_ffmpeg if recorded_ffmpeg and Path(recorded_ffmpeg).is_file() else None)
     ffprobe = system_ffprobe or (recorded_ffprobe if recorded_ffprobe and Path(recorded_ffprobe).is_file() else None)
     whisper_version = package_version(python, "faster-whisper")
+    pillow_version = package_version(python, "Pillow")
+    matplotlib_version = package_version(python, "matplotlib")
     return {
         "data_home": str(data_home()),
         "runtime_python": str(python),
@@ -54,10 +56,12 @@ def inspect(model="small"):
         "ffprobe": ffprobe,
         "ffmpeg_source": "system" if system_ffmpeg and system_ffprobe else ("isolated" if ffmpeg and ffprobe else None),
         "faster_whisper_version": whisper_version,
+        "pillow_version": pillow_version,
+        "matplotlib_version": matplotlib_version,
         "model": model,
         "model_path": str(models_dir() / model),
         "model_ready": model_ready(model),
-        "ready": bool(ffmpeg and ffprobe and whisper_version and model_ready(model)),
+        "ready": bool(ffmpeg and ffprobe and whisper_version and pillow_version and model_ready(model)),
     }
 
 
