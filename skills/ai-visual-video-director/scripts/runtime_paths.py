@@ -8,11 +8,11 @@ import sys
 from pathlib import Path
 
 
-APP_NAME = "tw-social-short-video-editor"
+APP_NAME = "ai-visual-video-director"
 
 
 def data_home():
-    override = os.environ.get("TW_SHORT_VIDEO_HOME")
+    override = os.environ.get("AI_VISUAL_VIDEO_HOME")
     if override:
         return Path(override).expanduser().resolve()
     if sys.platform == "win32":
