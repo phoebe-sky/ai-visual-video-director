@@ -1,0 +1,30 @@
+[
+  {
+    "start_time": 1.2,
+    "end_time": 3.8,
+    "spoken_text": "A lot of people think AI means you no longer have to think.",
+    "narrative_intent": "myth",
+    "visual_strategy": "kinetic_typography",
+    "visual_concept": "AI = no thinking, then cross out the equation",
+    "visual_elements": ["AI", "=", "NO THINKING", "strike-through"],
+    "motion": ["mask_reveal", "highlight"],
+    "layout": "center",
+    "priority": "high",
+    "confidence": 0.94,
+    "fallback": "presenter_only"
+  },
+  {
+    "start_time": 4.0,
+    "end_time": 8.0,
+    "spoken_text": "The real value is whether you can turn your judgment into a workflow that AI can understand.",
+    "narrative_intent": "insight",
+    "visual_strategy": "diagram",
+    "visual_concept": "Human Judgment → Workflow → AI Execution",
+    "visual_elements": ["Human Judgment", "Workflow", "AI"],
+    "motion": ["line_draw"],
+    "layout": "side",
+    "priority": "high",
+    "confidence": 0.91,
+    "fallback": "kinetic_typography"
+  }
+]
