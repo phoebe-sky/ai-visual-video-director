@@ -12,6 +12,14 @@ STRATEGIES={
 
 def validate(plan):
     errors=[]
+    cuts=plan.get("source_cuts") or []
+    for i,c in enumerate(cuts):
+        try:
+            a=float(c["source_start"]); b=float(c["source_end"]); speed=float(c.get("speed",1.0))
+            if a<0 or b<=a: errors.append(f"source_cuts[{i}] has invalid range")
+            if speed<=0: errors.append(f"source_cuts[{i}].speed must be > 0")
+        except (KeyError,TypeError,ValueError):
+            errors.append(f"source_cuts[{i}] requires numeric source_start/source_end/speed")
     cues=plan.get("visual_cues")
     if not isinstance(cues,list):
         return ["visual_cues must be an array"]
