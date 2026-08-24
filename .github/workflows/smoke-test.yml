@@ -1,0 +1,27 @@
+name: smoke-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  executable-skill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+          python -m pip install --upgrade pip
+          python -m pip install "Pillow>=10,<12"
+      - name: Compile scripts
+        run: |
+          python -m py_compile skills/ai-visual-video-director/scripts/*.py
+      - name: End-to-end smoke test
+        run: |
+          python skills/ai-visual-video-director/tests/smoke_test.py
