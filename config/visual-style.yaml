@@ -1,0 +1,21 @@
+version: 1
+visual_style:
+  tone:
+    - professional
+    - dynamic
+    - minimal
+
+  density: "medium"
+
+  hierarchy:
+    presenter: 1
+    key_message: 2
+    explanatory_visual: 3
+    decorative_motion: 4
+
+  rules:
+    max_simultaneous_major_elements: 3
+    avoid_same_layout_within_seconds: 15
+    minimum_major_visual_duration_seconds: 1.2
+    preferred_major_visual_duration_seconds: 2.5
+    use_generated_images_as_last_resort: true
