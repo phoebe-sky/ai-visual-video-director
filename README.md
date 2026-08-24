@@ -1,59 +1,108 @@
 # AI Visual Video Director
 
-**Understand the content. Direct the visuals. Edit the story.**
+> **Understand the content. Direct the visuals. Edit the story.**
 
-AI Visual Video Director is a semantic-first video editing Skill for short-form talking-head, educational, storytelling, product, tutorial, and mixed-content videos.
+AI Visual Video Director is an **end-to-end Codex Skill for real video editing and MP4 export**.
 
-It does **not** begin with a fixed template. It first understands what the speaker is saying, identifies the narrative function of each segment, chooses an appropriate visual language, then produces an edit plan that can drive motion graphics, diagrams, charts, icons, typography, screenshots, B-roll, and other visual treatments.
+It combines:
+- local-first faster-whisper transcription
+- semantic / narrative analysis
+- source cutting, reordering and per-segment speed changes
+- subtitle timing remap
+- semantic motion graphics
+- number cards and comparisons
+- charts and diagrams
+- screenshots / logos / icons
+- PIP and B-roll overlays
+- FFmpeg compositing
+- final H.264/AAC MP4 export
+- full decode QA
 
-## Core idea
+## Install
 
-Traditional auto-editing:
+The installable Skill is:
+
+`skills/ai-visual-video-director/`
+
+Use the repository URL with your Codex Skill installation workflow:
+
+`https://github.com/phoebe-sky/ai-visual-video-director`
+
+Then invoke:
 
 ```
-transcript → captions → cuts → export
+Use $ai-visual-video-director to edit this video and export the final MP4.
 ```
 
-AI Visual Video Director:
+The default contract is **not planning-only**. Unless you explicitly ask for a plan only, the Skill should continue through transcription → edit plan → render → QA → final MP4.
+
+## First run
+
+The Skill checks an isolated local runtime. If dependencies are missing, it requests one combined confirmation and installs them outside the Skill directory.
+
+Runtime:
+- FFmpeg / ffprobe
+- faster-whisper
+- Whisper `small` model
+- Pillow
+- matplotlib
+
+It does not require a separate desktop editing application.
+
+## How visual direction works
+
+The Skill first understands each narrative beat, then chooses a visual strategy.
+
+Examples:
+
+| Spoken content | Visual |
+|---|---|
+| 「一個月 29 美金」 | Number card |
+| 「以前 3 小時，現在 30 分鐘」 | Comparison |
+| Supported multi-category data | Chart |
+| AI Agent → MCP → tools | Diagram |
+| Personal story / emotional beat | Presenter-first |
+| Software operation | Screenshot or PIP |
+| Abstract insight | Typography / diagram / metaphor |
+
+It does not force every sentence into a graphic.
+
+## Actual editing
+
+The executable edit plan supports:
+
+```json
+"source_cuts": [
+  {"source_start": 12.4, "source_end": 18.9, "speed": 1.0},
+  {"source_start": 2.1, "source_end": 7.8, "speed": 1.08}
+]
+```
+
+The order of entries is the final story order, so the Skill can restructure the source instead of merely decorating the original clip.
+
+## Renderer
+
+The current public implementation uses **Python + FFmpeg** as the production renderer. This keeps the Skill portable and allows Codex to produce the final file directly without depending on a separate GUI editor.
+
+## Repository structure
 
 ```
-transcript
-→ narrative analysis
-→ semantic object extraction
-→ visual strategy
-→ motion strategy
-→ visual cue sheet
-→ edit plan
-→ render / execution
+skills/ai-visual-video-director/
+├── SKILL.md
+├── scripts/
+│   ├── setup_runtime.py
+│   ├── transcribe_video.py
+│   ├── validate_edit_plan.py
+│   ├── visual_renderer.py
+│   ├── render_video.py
+│   ├── qa_video.py
+│   └── ...
+├── references/
+└── assets/
 ```
 
-## What this Skill is designed to do
+## Status
 
-- Detect narrative intent: hook, problem, insight, story, example, comparison, process, result, CTA, etc.
-- Detect visual opportunities without requiring the video to be data-heavy or tutorial-heavy.
-- Turn numbers into the right visual form instead of forcing every number into a chart.
-- Turn abstract concepts into diagrams, typography, symbolic motion, or visual metaphors.
-- Use logos, icons, screenshots, UI cards, and generated visuals only when semantically useful.
-- Control visual density so the video does not become over-edited.
-- Preserve the presenter as the primary subject when appropriate.
-- Support creator-specific visual preferences through a reusable Creator Profile.
+**Public development build — executable.**
 
-## Public preview status
-
-This repository is the public development edition. The architecture is intentionally modular so it can later be separated into a private premium distribution without changing the core editing language.
-
-## Main files
-
-- `SKILL.md` — Skill entry point and execution contract
-- `QUICKSTART.md` — installation and first-run workflow
-- `config/` — creator, brand, visual and editing defaults
-- `agents/` — semantic, narrative, visual, motion and QC roles
-- `schemas/` — structured interchange formats
-- `rules/` — decision rules for visual selection, motion, pacing and density
-- `workflows/` — content-specific execution patterns
-- `examples/` — sample inputs and plans
-
-## Design principle
-
-> Do not decorate every sentence. Visualize the sentences that improve comprehension, emphasis, rhythm, or emotional impact.
-
+The next useful step is to install it and run it against real footage, then tune visual style presets from actual outputs rather than adding more theoretical rules.
