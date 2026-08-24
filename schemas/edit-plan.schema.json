@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Edit Plan",
+  "type": "object",
+  "required": ["content_profile","visual_cues","qc_notes"],
+  "properties": {
+    "content_profile": {"type":"object"},
+    "narrative_beats": {"type":"array","items":{"type":"object"}},
+    "visual_cues": {"type":"array","items":{"type":"object"}},
+    "source_cuts": {"type":"array","items":{"type":"object"}},
+    "subtitle_plan": {"type":"object"},
+    "asset_needs": {"type":"array","items":{"type":"object"}},
+    "qc_notes": {"type":"array","items":{"type":"string"}}
+  }
+}
