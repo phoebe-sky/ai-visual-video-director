@@ -4,9 +4,7 @@
 import argparse
 import importlib.util
 import json
-import math
 import os
-import shlex
 import subprocess
 import sys
 import tempfile
@@ -26,9 +24,7 @@ def maybe_relaunch():
 
 
 maybe_relaunch()
-
 from visual_renderer import render as render_visual  # noqa: E402
-
 
 VIDEO_EXTS={".mp4",".mov",".m4v",".webm",".mkv",".avi"}
 
@@ -45,6 +41,10 @@ def probe(ffprobe, source):
     return json.loads(result.stdout)
 
 
+def has_audio(meta):
+    return any(s.get("codec_type")=="audio" for s in meta.get("streams",[]))
+
+
 def ass_time(seconds):
     cs=max(0,int(round(float(seconds)*100)))
     h=cs//360000; cs%=360000
@@ -58,12 +58,11 @@ def wrap_caption(text,max_chars=16):
     if not text:
         return ""
     if " " in text:
-        words=text.split()
-        lines=[]; cur=""
-        for w in words:
-            test=(cur+" "+w).strip()
+        words=text.split(); lines=[]; cur=""
+        for word in words:
+            test=(cur+" "+word).strip()
             if len(test)>max_chars and cur:
-                lines.append(cur); cur=w
+                lines.append(cur); cur=word
             else:
                 cur=test
         if cur: lines.append(cur)
@@ -80,7 +79,59 @@ def default_font():
     return "Noto Sans CJK TC"
 
 
-def build_ass(transcript, path, width, height, style):
+def group_words(words,max_chars=16,max_seconds=2.8,max_gap=0.55):
+    groups=[]; current=[]; chars=0
+    for word in words:
+        text=str(word.get("text","")).strip()
+        if not text: continue
+        start=float(word.get("start",0)); end=float(word.get("end",start))
+        gap=start-float(current[-1]["end"]) if current else 0
+        projected=chars+len(text)
+        duration=end-float(current[0]["start"]) if current else 0
+        if current and (projected>max_chars or duration>max_seconds or gap>max_gap):
+            groups.append({
+              "start":current[0]["start"],"end":current[-1]["end"],
+              "text":"".join(x["text"] for x in current)
+            })
+            current=[]; chars=0
+        current.append({"start":start,"end":end,"text":text}); chars+=len(text)
+    if current:
+        groups.append({"start":current[0]["start"],"end":current[-1]["end"],"text":"".join(x["text"] for x in current)})
+    return groups
+
+
+def remap_transcript(transcript,cuts):
+    if not cuts:
+        return transcript
+    cumulative=0.0
+    remapped_words=[]
+    remapped_segments=[]
+    words=transcript.get("words") or []
+    segments=transcript.get("segments") or []
+    for cut in cuts:
+        a=float(cut["source_start"]); b=float(cut["source_end"]); speed=float(cut.get("speed",1.0) or 1.0)
+        for word in words:
+            ws=float(word.get("start",0)); we=float(word.get("end",ws))
+            if we<=a or ws>=b: continue
+            ns=cumulative+(max(ws,a)-a)/speed
+            ne=cumulative+(min(we,b)-a)/speed
+            if ne>ns:
+                remapped_words.append({"start":round(ns,3),"end":round(ne,3),"text":str(word.get("text","")).strip()})
+        if not words:
+            for seg in segments:
+                ss=float(seg.get("start",0)); se=float(seg.get("end",ss))
+                if se<=a or ss>=b: continue
+                ns=cumulative+(max(ss,a)-a)/speed
+                ne=cumulative+(min(se,b)-a)/speed
+                if ne>ns:
+                    remapped_segments.append({"start":round(ns,3),"end":round(ne,3),"text":str(seg.get("text","")).strip()})
+        cumulative+=(b-a)/speed
+    if remapped_words:
+        remapped_segments=group_words(remapped_words)
+    return {**transcript,"words":remapped_words,"segments":remapped_segments}
+
+
+def build_ass(transcript,path,width,height,style):
     segments=transcript.get("segments") or []
     font=style.get("font_name") or default_font()
     size=int(style.get("font_size",58 if height>=1600 else 40))
@@ -112,51 +163,86 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 
 def ffmpeg_escape_filter_path(path):
     value=str(Path(path).resolve()).replace("\\","/")
-    value=value.replace(":","\\:").replace("'","\\'")
-    return value
+    return value.replace(":","\\:").replace("'","\\'")
 
 
-def layout_xy(layout, base_w, base_h, ov_w, ov_h, start, motion):
+def atempo_chain(speed):
+    speed=float(speed)
+    factors=[]
+    while speed>2.0:
+        factors.append(2.0); speed/=2.0
+    while speed<0.5:
+        factors.append(0.5); speed/=0.5
+    factors.append(speed)
+    return ",".join(f"atempo={x:.6f}" for x in factors)
+
+
+def layout_xy(layout,start,motion):
     layout=(layout or "center").lower()
     if layout in {"top","upper_center"}:
-        tx=f"(W-w)/2"; ty="180"
+        tx="(W-w)/2"; ty="180"
     elif layout in {"lower","bottom"}:
-        tx=f"(W-w)/2"; ty=f"H-h-360"
+        tx="(W-w)/2"; ty="H-h-360"
     elif layout in {"left","side_left"}:
-        tx="60"; ty=f"(H-h)/2"
+        tx="60"; ty="(H-h)/2"
     elif layout in {"right","side_right"}:
-        tx=f"W-w-60"; ty=f"(H-h)/2"
+        tx="W-w-60"; ty="(H-h)/2"
     else:
-        tx=f"(W-w)/2"; ty=f"(H-h)/2"
-
-    motion_set=set(motion or [])
-    if "slide_left" in motion_set:
-        x=f"{tx}+180*max(0,1-(t-{start:.3f})/0.25)"
-    else:
-        x=tx
-    if "slide_up" in motion_set:
-        y=f"{ty}+140*max(0,1-(t-{start:.3f})/0.25)"
-    else:
-        y=ty
+        tx="(W-w)/2"; ty="(H-h)/2"
+    motions=set(motion or [])
+    x=f"{tx}+180*max(0,1-(t-{start:.3f})/0.25)" if "slide_left" in motions else tx
+    y=f"{ty}+140*max(0,1-(t-{start:.3f})/0.25)" if "slide_up" in motions else ty
     return x,y
 
 
-def make_overlay_asset(cue, out_dir, index):
+def make_overlay_asset(cue,out_dir,index):
     asset=cue.get("asset_path")
-    strategy=cue.get("visual_strategy","kinetic_typography")
     if asset:
         p=Path(asset).expanduser().resolve()
-        if p.is_file():
-            return p
-    if strategy in {"presenter_only","b_roll","picture_in_picture","screenshot","logo"} and asset:
+        if p.is_file(): return p
+    strategy=cue.get("visual_strategy","kinetic_typography")
+    if strategy in {"picture_in_picture","b_roll","screenshot","logo"} and asset:
         return None
     path=out_dir/f"cue-{index:03d}.png"
     render_visual(cue,path,900,650)
     return path
 
 
+def build_source_base(filters,cuts,audio_present,width,height,fps):
+    if not cuts:
+        filters.append(
+          f"[0:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
+          f"crop={width}:{height},setsar=1,fps={fps}[vbase]"
+        )
+        return "vbase",("0:a?" if audio_present else None)
+
+    vlabels=[]; alabels=[]
+    for i,cut in enumerate(cuts):
+        start=float(cut["source_start"]); end=float(cut["source_end"]); speed=float(cut.get("speed",1.0) or 1.0)
+        if end<=start: raise ValueError(f"source_cuts[{i}] has invalid range")
+        filters.append(
+          f"[0:v]trim=start={start:.3f}:end={end:.3f},"
+          f"setpts=(PTS-STARTPTS)/{speed:.6f},"
+          f"scale={width}:{height}:force_original_aspect_ratio=increase,"
+          f"crop={width}:{height},setsar=1,fps={fps}[vs{i}]"
+        )
+        vlabels.append(f"[vs{i}]")
+        if audio_present:
+            filters.append(
+              f"[0:a]atrim=start={start:.3f}:end={end:.3f},asetpts=PTS-STARTPTS,"
+              f"{atempo_chain(speed)}[as{i}]"
+            )
+            alabels.append(f"[as{i}]")
+    if audio_present:
+        chain="".join(sum(([vlabels[i],alabels[i]] for i in range(len(vlabels))),[]))
+        filters.append(f"{chain}concat=n={len(vlabels)}:v=1:a=1[vbase][abase]")
+        return "vbase","[abase]"
+    filters.append(f"{''.join(vlabels)}concat=n={len(vlabels)}:v=1:a=0[vbase]")
+    return "vbase",None
+
+
 def main():
-    p=argparse.ArgumentParser(description="Render semantic visual cues, subtitles and source audio to MP4")
+    p=argparse.ArgumentParser(description="Cut/reorder source, render semantic visuals, burn subtitles and export MP4")
     p.add_argument("source")
     p.add_argument("--plan",required=True)
     p.add_argument("--transcript")
@@ -175,14 +261,17 @@ def main():
     if not source.is_file(): raise SystemExit(f"source not found: {source}")
     if not plan_path.is_file(): raise SystemExit(f"plan not found: {plan_path}")
     plan=json.loads(plan_path.read_text(encoding="utf-8"))
+    cuts=plan.get("source_cuts") or []
     transcript={}
     if args.transcript:
         tp=Path(args.transcript).expanduser().resolve()
         if tp.is_file(): transcript=json.loads(tp.read_text(encoding="utf-8"))
+    transcript=remap_transcript(transcript,cuts)
 
     ffmpeg=resolve_media_binary("ffmpeg")
     ffprobe=resolve_media_binary("ffprobe")
     meta=probe(ffprobe,source)
+    audio_present=has_audio(meta)
     output.parent.mkdir(parents=True,exist_ok=True)
 
     with tempfile.TemporaryDirectory(prefix="ai-visual-render-") as td:
@@ -192,8 +281,7 @@ def main():
 
         cues=[]
         for idx,cue in enumerate(plan.get("visual_cues") or []):
-            if cue.get("visual_strategy")=="presenter_only":
-                continue
+            if cue.get("visual_strategy")=="presenter_only": continue
             start=float(cue.get("start_time",0)); end=float(cue.get("end_time",start))
             if end<=start: continue
             asset=make_overlay_asset(cue,generated,idx)
@@ -211,11 +299,9 @@ def main():
                 cmd += ["-loop","1","-t",f"{dur:.3f}","-i",str(asset)]
                 input_defs.append(("image",asset,dur))
 
-        filters=[
-          f"[0:v]scale={args.width}:{args.height}:force_original_aspect_ratio=increase,"
-          f"crop={args.width}:{args.height},setsar=1,fps={args.fps}[v0]"
-        ]
-        current="v0"
+        filters=[]
+        current,audio_map=build_source_base(filters,cuts,audio_present,args.width,args.height,args.fps)
+
         for n,((idx,cue,asset,start,end),(kind,_asset,dur)) in enumerate(zip(cues,input_defs),start=1):
             strategy=cue.get("visual_strategy","")
             motion=cue.get("motion") or ["fade"]
@@ -233,21 +319,21 @@ def main():
                       f"[{n}:v]trim=duration={dur:.3f},setpts=PTS-STARTPTS+{start:.3f}/TB,"
                       f"scale=520:-2,setsar=1[{ov}]"
                     )
-                    x,y=layout_xy(cue.get("layout","right"),args.width,args.height,520,700,start,motion)
+                    x,y=layout_xy(cue.get("layout","right"),start,motion)
             else:
                 fadeout=max(0,dur-0.18)
-                scale_filter=""
-                if "pop" in motion or "zoom" in motion:
-                    # Static semantic overlay with fade; position movement supplies the motion.
-                    scale_filter="scale=900:650,"
+                if strategy=="b_roll":
+                    prep=f"scale={args.width}:{args.height}:force_original_aspect_ratio=increase,crop={args.width}:{args.height},"
+                    x,y="0","0"
+                else:
+                    prep="scale=900:650:force_original_aspect_ratio=decrease,"
+                    x,y=layout_xy(cue.get("layout","center"),start,motion)
                 filters.append(
-                  f"[{n}:v]format=rgba,{scale_filter}"
+                  f"[{n}:v]format=rgba,{prep}"
                   f"fade=t=in:st=0:d=0.16:alpha=1,"
                   f"fade=t=out:st={fadeout:.3f}:d=0.16:alpha=1,"
                   f"setpts=PTS-STARTPTS+{start:.3f}/TB[{ov}]"
                 )
-                x,y=layout_xy(cue.get("layout","center"),args.width,args.height,900,650,start,motion)
-
             nxt=f"v{n}"
             filters.append(
               f"[{current}][{ov}]overlay=x='{x}':y='{y}':"
@@ -262,21 +348,21 @@ def main():
             filters.append(f"[{current}]ass='{escaped}'[vout]")
             current="vout"
 
+        cmd += ["-filter_complex",";".join(filters),"-map",f"[{current}]"]
+        if audio_map:
+            cmd += ["-map",audio_map]
         cmd += [
-          "-filter_complex",";".join(filters),
-          "-map",f"[{current}]",
-          "-map","0:a?",
           "-c:v","libx264","-preset",args.preset,"-crf",str(args.crf),
-          "-pix_fmt","yuv420p",
-          "-c:a","aac","-b:a","192k",
-          "-movflags","+faststart",
-          "-shortest",
-          str(output)
+          "-pix_fmt","yuv420p"
         ]
+        if audio_map:
+            cmd += ["-c:a","aac","-b:a","192k"]
+        cmd += ["-movflags","+faststart",str(output)]
         run(cmd)
 
     summary={
       "output":str(output),
+      "source_cuts":len(cuts),
       "visual_cues_rendered":len(cues),
       "subtitles_burned":bool(transcript and not args.no_subtitles),
       "width":args.width,"height":args.height,"fps":args.fps
