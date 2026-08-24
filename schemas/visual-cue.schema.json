@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Visual Cue",
+  "type": "object",
+  "required": ["start_time","end_time","spoken_text","visual_strategy","priority"],
+  "properties": {
+    "start_time": {"type":"number","minimum":0},
+    "end_time": {"type":"number","minimum":0},
+    "spoken_text": {"type":"string"},
+    "narrative_intent": {"type":"string"},
+    "visual_strategy": {
+      "type":"string",
+      "enum":["presenter_only","kinetic_typography","icon","logo","number_card","chart","diagram","comparison","timeline","checklist","ui_card","screenshot","picture_in_picture","b_roll","generated_visual","visual_metaphor"]
+    },
+    "visual_concept": {"type":"string"},
+    "visual_elements": {"type":"array","items":{"type":"string"}},
+    "motion": {"type":"array","items":{"type":"string"}},
+    "layout": {"type":"string"},
+    "priority": {"type":"string","enum":["low","medium","high"]},
+    "confidence": {"type":"number","minimum":0,"maximum":1},
+    "fallback": {"type":"string"}
+  }
+}
