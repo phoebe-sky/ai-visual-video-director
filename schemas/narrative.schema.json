@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Narrative Beat",
+  "type": "object",
+  "required": ["beat_id","start_time","end_time","primary_intent","summary"],
+  "properties": {
+    "beat_id": {"type":"string"},
+    "start_time": {"type":"number","minimum":0},
+    "end_time": {"type":"number","minimum":0},
+    "primary_intent": {
+      "type":"string",
+      "enum":["hook","problem","pain_point","question","claim","explanation","example","story","contrast","myth","insight","evidence","process","instruction","result","emotion","call_to_action","conclusion"]
+    },
+    "secondary_intents": {"type":"array","items":{"type":"string"}},
+    "summary": {"type":"string"},
+    "energy": {"type":"string","enum":["low","medium","high"]},
+    "emphasis": {"type":"string","enum":["low","medium","high"]}
+  }
+}
