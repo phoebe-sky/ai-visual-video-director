@@ -69,10 +69,10 @@ def maybe_relaunch_in_runtime(requested_provider):
     if importlib.util.find_spec("faster_whisper") is not None:
         return
     python = runtime_python()
-    if not python.is_file() or os.environ.get("TW_SHORT_VIDEO_RUNTIME_ACTIVE") == "1":
+    if not python.is_file() or os.environ.get("AI_VISUAL_VIDEO_RUNTIME_ACTIVE") == "1":
         return
     environment = os.environ.copy()
-    environment["TW_SHORT_VIDEO_RUNTIME_ACTIVE"] = "1"
+    environment["AI_VISUAL_VIDEO_RUNTIME_ACTIVE"] = "1"
     os.execve(str(python), [str(python), str(Path(__file__).resolve()), *sys.argv[1:]], environment)
 
 
@@ -140,7 +140,7 @@ def transcribe_local(source, model_name, language, prompt, compute_type, allow_m
 
 
 def multipart_body(fields, file_field, file_path):
-    boundary = f"----tw-short-video-{uuid.uuid4().hex}"
+    boundary = f"----ai-visual-video-{uuid.uuid4().hex}"
     pieces = []
     for name, value in fields:
         pieces.extend([
@@ -214,7 +214,7 @@ def extract_cloud_chunks(source, ffmpeg, ffprobe, output_dir, chunk_seconds):
 
 def transcribe_openai(source, ffmpeg, ffprobe, api_key, model, language, prompt, timeout, chunk_seconds):
     segments, words, texts = [], [], []
-    with tempfile.TemporaryDirectory(prefix="tw-short-transcribe-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="ai-visual-transcribe-") as temp_dir:
         for offset, chunk in extract_cloud_chunks(source, ffmpeg, ffprobe, Path(temp_dir), chunk_seconds):
             response = cloud_request(chunk, api_key, model, language, prompt, timeout)
             texts.append(str(response.get("text", "")).strip())
